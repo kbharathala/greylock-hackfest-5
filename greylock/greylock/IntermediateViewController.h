@@ -10,4 +10,6 @@
 
 @interface IntermediateViewController : UIViewController
 
+- (id) initWithCount:(int)count;
+
 @end

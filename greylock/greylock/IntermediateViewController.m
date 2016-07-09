@@ -62,9 +62,18 @@
     [self.view addSubview:readyButton];
 }
 
+- (void) viewWillAppear:(BOOL)animated {
+    [super viewWillAppear:animated];
+    
+    if ([[[NSUserDefaults standardUserDefaults] objectForKey:@"leavingWebView"] boolValue]) {
+        [[NSUserDefaults standardUserDefaults] setObject:@"NO" forKey:@"leavingWebView"];
+        [self dismissViewControllerAnimated:NO completion:nil];
+    }
+}
+
 - (void) readyPressed {
     WebPlayerViewController *webplayer = [[WebPlayerViewController alloc] init];
-    [self.navigationController pushViewController:webplayer animated:YES];
+    [self presentViewController:webplayer animated:YES completion:nil];
     
 }
 

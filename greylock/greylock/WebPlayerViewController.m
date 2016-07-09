@@ -8,7 +8,7 @@
 
 #import "WebPlayerViewController.h"
 
-@interface WebPlayerViewController ()
+@interface WebPlayerViewController () <UIGestureRecognizerDelegate>
 
 @property(nonatomic, strong) UIWebView* webView;
 
@@ -28,10 +28,27 @@
     self.webView.scrollView.bounces = NO;
     [self.webView loadRequest:urlRequest];
     
+    UITapGestureRecognizer *doubleTap =
+        [[UITapGestureRecognizer alloc] initWithTarget:self action:@selector(handleDoubleTap)];
+    doubleTap.numberOfTouchesRequired = 1;
+    doubleTap.numberOfTapsRequired = 2;
+    doubleTap.delegate = self;
+    [self.webView addGestureRecognizer:doubleTap];
+    
     [self.view addSubview:self.webView];
 }
 
+- (void) handleDoubleTap {
+    [[NSUserDefaults standardUserDefaults] setObject:@"YES" forKey:@"leavingWebView"];
+    [self dismissViewControllerAnimated:NO completion:nil];
+}
+
 - (BOOL)prefersStatusBarHidden {
+    return YES;
+}
+
+- (BOOL)gestureRecognizer:(UIGestureRecognizer *)gestureRecognizer
+    shouldRecognizeSimultaneouslyWithGestureRecognizer:(UIGestureRecognizer *)otherGestureRecognizer {
     return YES;
 }
 

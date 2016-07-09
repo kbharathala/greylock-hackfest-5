@@ -31,8 +31,43 @@
             forControlEvents:UIControlEventTouchUpInside];
     [self.view addSubview:genericWidget];
     
+    UIBarButtonItem *joinButton =
+    [[UIBarButtonItem alloc] initWithTitle:@"Join"
+                                     style:UIBarButtonItemStylePlain
+                                    target:self
+                                    action:@selector(joinButtonPressed)];
+    self.navigationItem.rightBarButtonItem = joinButton;
     [self requestPhoneID];
     
+}
+
+- (void) joinButtonPressed {
+    UIAlertController *alertController =
+    [UIAlertController alertControllerWithTitle:@"What room do you want to join"
+                                        message:nil
+                                 preferredStyle:UIAlertControllerStyleAlert];
+    
+    [alertController addTextFieldWithConfigurationHandler:^(UITextField *textField)
+     {
+         textField.placeholder = @"Room Number";
+     }];
+    
+    UIAlertAction *actionOk =
+    [UIAlertAction actionWithTitle:@"Done"
+                             style:UIAlertActionStyleDefault
+                           handler:^(UIAlertAction *action)
+     {
+         [self joinRoom:alertController.textFields.firstObject.text];
+     }];
+    
+    UIAlertAction *actionCancel =
+    [UIAlertAction actionWithTitle:@"Cancel"
+                             style:UIAlertActionStyleCancel
+                           handler:nil];
+    
+    [alertController addAction:actionCancel];
+    [alertController addAction:actionOk];
+    [self presentViewController:alertController animated:YES completion:nil];
 }
 
 - (void) requestPhoneID {
@@ -76,7 +111,7 @@
                              style:UIAlertActionStyleDefault
                            handler:^(UIAlertAction *action)
      {
-         [self informationSet];
+         [self setWithCount:alertController.textFields.firstObject.text.intValue];
          
      }];
     
@@ -84,7 +119,7 @@
     [self presentViewController:alertController animated:YES completion:nil];
 }
 
-- (void) informationSet {
+- (void) setWithCount:(int)count {
     NSString *url = [NSString stringWithFormat:@"http://54.174.96.55:3000/device/create_session/%@",
                      [[NSUserDefaults standardUserDefaults] objectForKey:@"phoneID"]];
     
@@ -109,8 +144,46 @@
                 
             }] resume];
     
-    IntermediateViewController *intermediateVC = [[IntermediateViewController alloc] init];
-    [self.navigationController pushViewController:intermediateVC animated:YES];
+    IntermediateViewController *intermediateVC =
+        [[IntermediateViewController alloc] initWithCount:count];
+    [self presentViewController:intermediateVC animated:YES completion:nil];
+}
+
+- (void) joinRoom:(NSString *)sessionID {
+    NSString *post = [NSString stringWithFormat:@"phone_id=%@&session_id=%@",
+                      [[NSUserDefaults standardUserDefaults] objectForKey:@"phoneID"],
+                      sessionID];
+    NSData *postData = [post dataUsingEncoding:NSASCIIStringEncoding allowLossyConversion:YES];
+    NSString *postLength = [NSString stringWithFormat:@"%lu", (unsigned long)[postData length]];
+    NSMutableURLRequest *request = [[NSMutableURLRequest alloc] init];
+    
+    [request setURL:[NSURL URLWithString: @"http://54.174.96.55:3000/device/register_session"]];
+    [request setHTTPMethod:@"POST"];
+    [request setValue:postLength forHTTPHeaderField:@"Content-Length"];
+    [request setValue:@"application/x-www-form-urlencoded" forHTTPHeaderField:@"Content-Type"];
+    [request setHTTPBody:postData];
+    
+    NSURLSession *session = [NSURLSession sharedSession];
+    [[session dataTaskWithRequest:request
+                completionHandler:^(NSData *data, NSURLResponse *response, NSError *error) {
+                    if (data) {
+                        NSDictionary *dict =
+                            [NSJSONSerialization JSONObjectWithData:data
+                                                            options:kNilOptions
+                                                              error:&error];
+                        NSLog(@"%@", dict);
+                        int count = [[dict objectForKey:@"count"] intValue];
+                        
+                        [[NSUserDefaults standardUserDefaults] setObject:sessionID forKey:@"sessionID"];
+                        IntermediateViewController *intermediateVC =
+                            [[IntermediateViewController alloc] initWithCount:count];
+                        [self presentViewController:intermediateVC animated:YES completion:nil];
+                        
+                        
+                    } else {
+                       NSLog(@"ERROR");
+                    }
+               }] resume];
 }
 
 
