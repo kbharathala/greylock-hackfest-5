@@ -19,13 +19,16 @@
 - (void)viewDidLoad {
     [super viewDidLoad];
     
-    self.webView = [[UIWebView alloc] initWithFrame:self.view.frame];
     NSString *urlString = @"http://54.174.96.55:3000/";
     NSURL *url = [NSURL URLWithString:urlString];
     NSURLRequest *urlRequest = [NSURLRequest requestWithURL:url];
-    [_webView loadRequest:urlRequest];
-    [self.view addSubview:self.webView];
     
+    self.webView = [[UIWebView alloc] initWithFrame:self.view.frame];
+    self.webView.scrollView.scrollEnabled = NO;
+    self.webView.scrollView.bounces = NO;
+    [self.webView loadRequest:urlRequest];
+    
+    [self.view addSubview:self.webView];
 }
 
 - (BOOL)prefersStatusBarHidden {

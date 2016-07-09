@@ -54,11 +54,61 @@
                                                                        error:&error];
                 
                 NSLog(@"%@", json);
+                NSString *phone_id = [json objectForKey:@"phone_id"];
+                [[NSUserDefaults standardUserDefaults] setObject:phone_id forKey:@"phoneID"];
                 
             }] resume];
 }
 
 - (void)launchWidget1 {
+    UIAlertController *alertController =
+    [UIAlertController alertControllerWithTitle:@"How many phones do you want to use?"
+                                        message:nil
+                                 preferredStyle:UIAlertControllerStyleAlert];
+    
+    [alertController addTextFieldWithConfigurationHandler:^(UITextField *textField)
+     {
+         textField.placeholder = @"Number of phones";
+     }];
+    
+    UIAlertAction *actionOk =
+    [UIAlertAction actionWithTitle:@"Done"
+                             style:UIAlertActionStyleDefault
+                           handler:^(UIAlertAction *action)
+     {
+         [self informationSet];
+         
+     }];
+    
+    [alertController addAction:actionOk];
+    [self presentViewController:alertController animated:YES completion:nil];
+}
+
+- (void) informationSet {
+    NSString *url = [NSString stringWithFormat:@"http://54.174.96.55:3000/device/create_session/%@",
+                     [[NSUserDefaults standardUserDefaults] objectForKey:@"phoneID"]];
+    
+    NSURLSession *session = [NSURLSession sharedSession];
+    [[session dataTaskWithURL:[NSURL URLWithString:url]
+            completionHandler:^(NSData *data,
+                                NSURLResponse *response,
+                                NSError *error) {
+                NSHTTPURLResponse *urlResponse = (NSHTTPURLResponse *)response;
+                if (urlResponse.statusCode != 200) {
+                    NSLog(@"Error getting %@, HTTP status code %li", url, (long)urlResponse.statusCode);
+                    return;
+                }
+                
+                NSDictionary *json = [NSJSONSerialization JSONObjectWithData:data
+                                                                     options:kNilOptions
+                                                                       error:&error];
+                
+                NSLog(@"%@", json);
+                NSString *session_id = [json objectForKey:@"session_id"];
+                [[NSUserDefaults standardUserDefaults] setObject:session_id forKey:@"sessionID"];
+                
+            }] resume];
+    
     IntermediateViewController *intermediateVC = [[IntermediateViewController alloc] init];
     [self.navigationController pushViewController:intermediateVC animated:YES];
 }
