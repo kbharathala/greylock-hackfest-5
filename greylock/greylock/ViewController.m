@@ -10,7 +10,16 @@
 #import "WebPlayerViewController.h"
 #import "IntermediateViewController.h"
 
-@interface ViewController ()
+@interface ViewController () <UICollectionViewDataSource,UICollectionViewDelegateFlowLayout> {
+    UICollectionView *_collectionView;
+}
+
+typedef NS_ENUM(NSUInteger, MasterWidgetList) {
+    MasterWidgetYoutube,
+    MasterWidgetCount,
+};
+
+@property(nonatomic) NSMutableArray *imageList;
 
 @end
 
@@ -28,18 +37,6 @@
 - (void)viewDidLoad {
     [super viewDidLoad];
     
-    float width = self.view.frame.size.width;
-    float height = self.view.frame.size.height;
-    
-    UIButton *genericWidget = [UIButton buttonWithType:UIButtonTypeRoundedRect];
-    [genericWidget setTitle:@"Widget 1" forState:UIControlStateNormal];
-    [genericWidget sizeToFit];
-    [genericWidget setCenter:CGPointMake(width/2, height/2)];
-    [genericWidget addTarget:self
-                      action:@selector(launchWidget1)
-            forControlEvents:UIControlEventTouchUpInside];
-    [self.view addSubview:genericWidget];
-    
     UIBarButtonItem *joinButton =
     [[UIBarButtonItem alloc] initWithTitle:@"Join"
                                      style:UIBarButtonItemStylePlain
@@ -47,6 +44,19 @@
                                     action:@selector(joinButtonPressed)];
     self.navigationItem.rightBarButtonItem = joinButton;
     [self requestPhoneID];
+    
+    UICollectionViewFlowLayout *layout = [[UICollectionViewFlowLayout alloc] init];
+    _collectionView =
+        [[UICollectionView alloc] initWithFrame:self.view.frame collectionViewLayout:layout];
+    [_collectionView setDataSource:self];
+    [_collectionView setDelegate:self];
+    [_collectionView registerClass:[UICollectionViewCell class]
+        forCellWithReuseIdentifier:@"cellIdentifier"];
+    [_collectionView setBackgroundColor:[UIColor whiteColor]];
+    [self.view addSubview:_collectionView];
+    
+    UIImage *youtubeImage = [UIImage imageNamed:@"youtube.png"];
+    self.imageList = [[NSMutableArray alloc] initWithObjects:youtubeImage, nil];
     
 }
 
@@ -184,8 +194,8 @@
  * Called by launch widget to go to intermediateViewController.
  */
 - (void) setWithCount:(int)count {
-    NSString *post = [NSString stringWithFormat:@"phone_id=%@",
-                      [[NSUserDefaults standardUserDefaults] objectForKey:@"phoneID"]];
+    NSString *post = [NSString stringWithFormat:@"phone_id=%@&count=%d",
+                      [[NSUserDefaults standardUserDefaults] objectForKey:@"phoneID"], count];
     NSData *postData = [post dataUsingEncoding:NSASCIIStringEncoding allowLossyConversion:YES];
     NSString *postLength = [NSString stringWithFormat:@"%lu", (unsigned long)[postData length]];
     NSMutableURLRequest *request = [[NSMutableURLRequest alloc] init];
@@ -214,14 +224,41 @@
                                                                        error:&error];
                 
                 NSLog(@"%@", json);
-                NSString *session_id = [json objectForKey:@"session_id"];
+                NSString *session_id = [NSString stringWithFormat:@"%@", [json objectForKey:@"session_id"]];
                 [[NSUserDefaults standardUserDefaults] setObject:session_id forKey:@"sessionID"];
-                
-                IntermediateViewController *intermediateVC =
-                [[IntermediateViewController alloc] initWithCount:count];
-                [self presentViewController:intermediateVC animated:YES completion:nil];
-                
             }] resume];
+    
+    IntermediateViewController *intermediateVC =
+    [[IntermediateViewController alloc] initWithCount:count];
+    [self.navigationController pushViewController:intermediateVC animated:YES];
+}
+
+- (NSInteger)collectionView:(UICollectionView *)collectionView numberOfItemsInSection:(NSInteger)section {
+    return MasterWidgetCount;
+}
+
+// The cell that is returned must be retrieved from a call to -dequeueReusableCellWithReuseIdentifier:forIndexPath:
+- (UICollectionViewCell *)collectionView:(UICollectionView *)collectionView
+                  cellForItemAtIndexPath:(NSIndexPath *)indexPath {
+    
+    UICollectionViewCell *cell=
+        [collectionView dequeueReusableCellWithReuseIdentifier:@"cellIdentifier"
+                                                  forIndexPath:indexPath];
+    UIImageView *backgroundImage = [[UIImageView alloc] initWithImage:[self.imageList objectAtIndex:indexPath.item]];
+    backgroundImage.frame = cell.contentView.bounds;
+    [cell.contentView addSubview:backgroundImage];
+    
+    return cell;
+}
+
+- (void) collectionView:(UICollectionView *)collectionView didSelectItemAtIndexPath:(NSIndexPath *)indexPath {
+    if (indexPath.item == MasterWidgetYoutube) {
+        [self launchWidget1];
+    }
+}
+
+- (CGSize)collectionView:(UICollectionView *)collectionView layout:(UICollectionViewLayout*)collectionViewLayout sizeForItemAtIndexPath:(NSIndexPath *)indexPath {
+    return CGSizeMake(self.view.frame.size.width/2 - 5, self.view.frame.size.width/2 - 5);
 }
 
 
