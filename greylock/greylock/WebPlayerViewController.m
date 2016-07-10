@@ -40,9 +40,23 @@
     doubleTap.numberOfTouchesRequired = 1;
     doubleTap.numberOfTapsRequired = 2;
     doubleTap.delegate = self;
-    [self.webView addGestureRecognizer:doubleTap];
+    
+    UITapGestureRecognizer *tripleTap =
+    [[UITapGestureRecognizer alloc] initWithTarget:self action:@selector(handleTripleTap)];
+    tripleTap.numberOfTouchesRequired = 1;
+    tripleTap.numberOfTapsRequired = 3;
+    tripleTap.delegate = self;
 
+    
+    [doubleTap requireGestureRecognizerToFail : tripleTap];
+    
+    [self.webView addGestureRecognizer:doubleTap];
+    [self.webView addGestureRecognizer:tripleTap];
     [self.view addSubview:self.webView];
+}
+
+- (void) handleTripleTap {
+    [self.navigationController popToRootViewControllerAnimated:YES];
 }
 
 -(BOOL)handleDoubleTapWithGestureRecognizer:(UITapGestureRecognizer *)gestureRecognizer {

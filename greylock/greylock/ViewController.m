@@ -21,6 +21,7 @@ typedef NS_ENUM(NSUInteger, MasterWidgetList) {
     MasterWidgetImgur,
     MasterWidgetCamera,
     MasterWidgetSharing,
+    MasterWidgetFlappy,
     MasterWidgetCount,
 };
 
@@ -35,9 +36,13 @@ typedef NS_ENUM(NSUInteger, MasterWidgetList) {
 - (id) init {
     self = [super init];
     if (self) {
-        self.title = @"Konnected";
+        self.title = @"Seamless";
     }
     return self;
+}
+
+- (void) viewWillAppear:(BOOL)animated {
+    [self.navigationController.navigationBar setHidden:NO];
 }
 
 - (void)viewDidLoad {
@@ -61,7 +66,7 @@ typedef NS_ENUM(NSUInteger, MasterWidgetList) {
     [self requestPhoneID];
     
     UICollectionViewFlowLayout *layout = [[UICollectionViewFlowLayout alloc] init];
-    [layout setSectionInset:UIEdgeInsetsMake(10, 5, 0, 5)];
+    [layout setSectionInset:UIEdgeInsetsMake(5, 5, 0, 5)];
     _collectionView =
         [[UICollectionView alloc] initWithFrame:self.view.frame collectionViewLayout:layout];
     [_collectionView setDataSource:self];
@@ -69,14 +74,17 @@ typedef NS_ENUM(NSUInteger, MasterWidgetList) {
     [_collectionView registerClass:[UICollectionViewCell class]
         forCellWithReuseIdentifier:@"cellIdentifier"];
     [_collectionView setBackgroundColor:[UIColor colorWithRed:0 green:0 blue:68.0/255 alpha:1.0]];
+    // [_collectionView setBackgroundColor:[UIColor whiteColor]];
     [self.view addSubview:_collectionView];
     
     UIImage *youtubeImage = [UIImage imageNamed:@"youtube.png"];
-    UIImage *imgurImage = [UIImage imageNamed:@"imgur.png"];
+    UIImage *imgurImage = [UIImage imageNamed:@"imgur-white.png"];
     UIImage *cameraImage = [UIImage imageNamed:@"camera.png"];
     UIImage *sharingImage = [UIImage imageNamed:@"sharing.png"];
-    self.imageList = [[NSMutableArray alloc] initWithObjects:youtubeImage, imgurImage, cameraImage, sharingImage ,nil];
-    
+    UIImage *flappyImage = [UIImage imageNamed:@"flappy.png"];
+    self.imageList =
+        [[NSMutableArray alloc] initWithObjects:youtubeImage, imgurImage, cameraImage,
+                                                sharingImage, flappyImage, nil];
 }
 
 /*
@@ -121,6 +129,7 @@ typedef NS_ENUM(NSUInteger, MasterWidgetList) {
     [alertController addTextFieldWithConfigurationHandler:^(UITextField *textField)
      {
          textField.placeholder = @"Room Number";
+         textField.keyboardType = UIKeyboardTypeNumberPad;
      }];
     
     UIAlertAction *actionOk =
@@ -129,6 +138,7 @@ typedef NS_ENUM(NSUInteger, MasterWidgetList) {
                            handler:^(UIAlertAction *action)
      {
          [self joinRoom:alertController.textFields.firstObject.text];
+         
      }];
     
     UIAlertAction *actionCancel =
@@ -192,6 +202,7 @@ typedef NS_ENUM(NSUInteger, MasterWidgetList) {
     [alertController addTextFieldWithConfigurationHandler:^(UITextField *textField)
      {
          textField.placeholder = @"Number of phones";
+         textField.keyboardType = UIKeyboardTypeNumberPad;
      }];
     
     UIAlertAction *actionOk =
@@ -283,11 +294,17 @@ typedef NS_ENUM(NSUInteger, MasterWidgetList) {
     backgroundImage.frame = cell.contentView.bounds;
     [cell.contentView addSubview:backgroundImage];
     
-    cell.layer.masksToBounds = YES;
-    cell.layer.cornerRadius = 20;
-    
     if (indexPath.item == MasterWidgetYoutube) {
+//        cell.backgroundColor = [UIColor colorWithRed:1.0 green:200/255.0 blue:28/255.0 alpha:1.0];
         cell.backgroundColor = [UIColor whiteColor];
+    } else if (indexPath.item == MasterWidgetImgur) {
+        cell.backgroundColor = [UIColor colorWithRed:0.0 green:118/255.0 blue:192/255.0 alpha:1.0];
+        backgroundImage.frame = CGRectMake(10, 10, cell.contentView.frame.size.width - 20, cell.contentView.frame.size.height-20);
+    } else if (indexPath.item == MasterWidgetCamera) {
+        cell.backgroundColor = [UIColor colorWithRed:236/255.0 green:64.0/255 blue:122/255.0 alpha:1.0];
+        backgroundImage.frame = CGRectMake(10, 10, cell.contentView.frame.size.width - 20, cell.contentView.frame.size.height-20);
+    } else if (indexPath.item == MasterWidgetSharing) {
+        cell.backgroundColor = [UIColor colorWithRed:104.0/255 green:159.0/255 blue:55/255.0 alpha:1.0];
     }
     
     
@@ -298,11 +315,14 @@ typedef NS_ENUM(NSUInteger, MasterWidgetList) {
     if (indexPath.item == MasterWidgetYoutube) {
         [self launchWidget];
         [[NSUserDefaults standardUserDefaults] setObject:@"youtube" forKey:@"widgetType"];
+    } else if (indexPath.item == MasterWidgetFlappy) {
+        [[NSUserDefaults standardUserDefaults] setObject:@"bird" forKey:@"widgetType"];
+        [self launchWidget];
     } else if (indexPath.item == MasterWidgetSharing) {
         [[NSUserDefaults standardUserDefaults] setObject:@"photoSharing" forKey:@"widgetType"];
         [self launchSharing];
     } else if (indexPath.item == MasterWidgetCamera) {
-        [[NSUserDefaults standardUserDefaults] setObject:@"photoSharing" forKey:@"widgetType"];
+        [[NSUserDefaults standardUserDefaults] setObject:@"cameraSharing" forKey:@"widgetType"];
         [self launchCameraSharing];
     }
 }
@@ -388,9 +408,9 @@ typedef NS_ENUM(NSUInteger, MasterWidgetList) {
            }
            
            if (task.result) {
-               AWSS3TransferManagerUploadOutput *uploadOutput = task.result;
-               [weakSelf performSelectorOnMainThread:@selector(launchWidget) withObject:nil waitUntilDone:NO];
-               // The file uploaded successfully.
+               [weakSelf performSelectorOnMainThread:@selector(launchWidget)
+                                          withObject:nil
+                                       waitUntilDone:NO];
            }
            return nil;
        }];
@@ -398,7 +418,9 @@ typedef NS_ENUM(NSUInteger, MasterWidgetList) {
     
 }
 
-- (CGSize)collectionView:(UICollectionView *)collectionView layout:(UICollectionViewLayout*)collectionViewLayout sizeForItemAtIndexPath:(NSIndexPath *)indexPath {
+- (CGSize)collectionView:(UICollectionView *)collectionView
+                  layout:(UICollectionViewLayout*)collectionViewLayout
+  sizeForItemAtIndexPath:(NSIndexPath *)indexPath {
     
     float cellSize = self.view.frame.size.width/3 - 7;
     
@@ -411,8 +433,5 @@ typedef NS_ENUM(NSUInteger, MasterWidgetList) {
         return onebyone;
     }
 }
-
-
-
 
 @end

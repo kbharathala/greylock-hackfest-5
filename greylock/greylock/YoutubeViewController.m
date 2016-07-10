@@ -23,7 +23,8 @@
 - (void)viewDidLoad {
     [super viewDidLoad];
     
-    NSString *urlString = [NSString stringWithFormat: @"http://54.174.96.55:3000/youtube/%@/%@",
+    NSString *urlString = [NSString stringWithFormat: @"http://54.174.96.55:3000/%@/%@/%@",
+                           [[NSUserDefaults standardUserDefaults] objectForKey:@"widgetType"],
                            [[NSUserDefaults standardUserDefaults] objectForKey:@"sessionID"],
                            [[NSUserDefaults standardUserDefaults] objectForKey:@"phoneID"]];
     NSURL *url = [NSURL URLWithString:urlString];
@@ -36,8 +37,22 @@
     [self.webView loadRequest:urlRequest];
     [self.webView setMediaPlaybackRequiresUserAction:NO];
     
+    UITapGestureRecognizer *tripleTap =
+    [[UITapGestureRecognizer alloc] initWithTarget:self action:@selector(handleTripleTap)];
+    tripleTap.numberOfTouchesRequired = 1;
+    tripleTap.numberOfTapsRequired = 3;
+    tripleTap.delegate = self;
+    
+    if([[[NSUserDefaults standardUserDefaults] objectForKey:@"widgetType"] isEqualToString:@"youtube"]) {
+        [self.webView addGestureRecognizer:tripleTap];
+    }
     [self.view addSubview:self.webView];
 }
+
+- (void) handleTripleTap {
+    [self.navigationController popToRootViewControllerAnimated:YES];
+}
+
 
 - (BOOL)prefersStatusBarHidden {
     return YES;
