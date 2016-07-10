@@ -7,7 +7,6 @@
 //
 
 #import "ViewController.h"
-#import "WebPlayerViewController.h"
 #import "IntermediateViewController.h"
 
 @interface ViewController () <UICollectionViewDataSource,UICollectionViewDelegateFlowLayout> {
@@ -105,7 +104,7 @@ typedef NS_ENUM(NSUInteger, MasterWidgetList) {
      }];
     
     UIAlertAction *actionOk =
-    [UIAlertAction actionWithTitle:@"Done"
+    [UIAlertAction actionWithTitle:@"Join"
                              style:UIAlertActionStyleDefault
                            handler:^(UIAlertAction *action)
      {
@@ -140,23 +139,13 @@ typedef NS_ENUM(NSUInteger, MasterWidgetList) {
     [request setValue:@"application/x-www-form-urlencoded" forHTTPHeaderField:@"Content-Type"];
     [request setHTTPBody:postData];
     
+    __weak ViewController *weakSelf = self;
     NSURLSession *session = [NSURLSession sharedSession];
     [[session dataTaskWithRequest:request
                 completionHandler:^(NSData *data, NSURLResponse *response, NSError *error) {
                     if (data) {
-                        NSDictionary *dict =
-                        [NSJSONSerialization JSONObjectWithData:data
-                                                        options:kNilOptions
-                                                          error:&error];
-                        NSLog(@"%@", dict);
-                        int count = [[dict objectForKey:@"count"] intValue];
-                        
                         [[NSUserDefaults standardUserDefaults] setObject:sessionID forKey:@"sessionID"];
-                        IntermediateViewController *intermediateVC =
-                        [[IntermediateViewController alloc] initWithCount:count];
-                        [self presentViewController:intermediateVC animated:YES completion:nil];
-                        
-                        
+                        [weakSelf performSelectorOnMainThread:@selector(pushDetail) withObject:nil waitUntilDone:NO];
                     } else {
                         NSLog(@"ERROR");
                     }
@@ -186,6 +175,12 @@ typedef NS_ENUM(NSUInteger, MasterWidgetList) {
          
      }];
     
+    UIAlertAction *actionCancel =
+    [UIAlertAction actionWithTitle:@"Cancel"
+                             style:UIAlertActionStyleCancel
+                           handler:nil];
+    
+    [alertController addAction:actionCancel];
     [alertController addAction:actionOk];
     [self presentViewController:alertController animated:YES completion:nil];
 }
@@ -208,6 +203,10 @@ typedef NS_ENUM(NSUInteger, MasterWidgetList) {
     [request setValue:@"application/x-www-form-urlencoded" forHTTPHeaderField:@"Content-Type"];
     [request setHTTPBody:postData];
     
+    NSLog(@"ENTERING CREATE_SESSION REQUEST");
+    
+    __weak ViewController *weakSelf = self;
+    __weak NSNumber *weakCount = [NSNumber numberWithInt:count];
     NSURLSession *session = [NSURLSession sharedSession];
     [[session dataTaskWithRequest:request
             completionHandler:^(NSData *data,
@@ -222,14 +221,23 @@ typedef NS_ENUM(NSUInteger, MasterWidgetList) {
                 NSDictionary *json = [NSJSONSerialization JSONObjectWithData:data
                                                                      options:kNilOptions
                                                                        error:&error];
-                
+                NSLog(@"THIS IS WHERE CREATE SESSION IS LOGGING");
                 NSLog(@"%@", json);
                 NSString *session_id = [NSString stringWithFormat:@"%@", [json objectForKey:@"session_id"]];
                 [[NSUserDefaults standardUserDefaults] setObject:session_id forKey:@"sessionID"];
+                
+                [weakSelf performSelectorOnMainThread:@selector(pushDetail:) withObject:weakCount waitUntilDone:NO];
             }] resume];
-    
+}
+
+- (void) pushDetail:(NSNumber*)count {
     IntermediateViewController *intermediateVC =
-    [[IntermediateViewController alloc] initWithCount:count];
+    [[IntermediateViewController alloc] initWithCount:[count intValue]];
+    [self.navigationController pushViewController:intermediateVC animated:YES];
+}
+
+- (void) pushDetail {
+    IntermediateViewController *intermediateVC = [[IntermediateViewController alloc] init];
     [self.navigationController pushViewController:intermediateVC animated:YES];
 }
 

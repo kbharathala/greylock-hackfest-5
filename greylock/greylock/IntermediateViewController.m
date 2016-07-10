@@ -8,6 +8,7 @@
 
 #import "IntermediateViewController.h"
 #import "WebPlayerViewController.h"
+#import "SVProgressHUD/SVProgressHUD.h"
 
 @interface IntermediateViewController ()
 
@@ -27,14 +28,14 @@
     return self;
 }
 
-- (void) viewWillAppear:(BOOL)animated {
-    [super viewWillAppear:animated];
-    
-    if ([[[NSUserDefaults standardUserDefaults] objectForKey:@"leavingWebView"] boolValue]) {
-        [[NSUserDefaults standardUserDefaults] setObject:@"NO" forKey:@"leavingWebView"];
-        [self dismissViewControllerAnimated:NO completion:nil];
-    }
-}
+//- (void) viewWillAppear:(BOOL)animated {
+//    [super viewWillAppear:animated];
+//    
+//    if ([[[NSUserDefaults standardUserDefaults] objectForKey:@"leavingWebView"] boolValue]) {
+//        [[NSUserDefaults standardUserDefaults] setObject:@"NO" forKey:@"leavingWebView"];
+//        [self.navigationController popViewControllerAnimated:NO];
+//    }
+//}
 
 - (void)viewDidLoad {
     [super viewDidLoad];
@@ -85,10 +86,11 @@
 }
 
 - (void) startCalibrateSession {
-    NSString *post = [NSString stringWithFormat:@"phone_id=%@&session_id=%@&timestamp=%f",
+    NSString *post = [NSString stringWithFormat:@"phone_id=%@&session_id=%@&timestamp=%f&screen_height=%f&screen_width=%f",
                       [[NSUserDefaults standardUserDefaults] objectForKey:@"phoneID"],
                       [[NSUserDefaults standardUserDefaults] objectForKey:@"sessionID"],
-                      [[NSDate date] timeIntervalSince1970] * 1000];
+                      [[NSDate date] timeIntervalSince1970] * 1000,
+                      self.view.frame.size.height, self.view.frame.size.width];
     NSLog(@"%@", post);
     NSData *postData = [post dataUsingEncoding:NSASCIIStringEncoding allowLossyConversion:YES];
     NSString *postLength = [NSString stringWithFormat:@"%lu", (unsigned long)[postData length]];
@@ -110,6 +112,7 @@
                                                           error:&error];
                         NSLog(@"%@", dict);
                         if ([[dict objectForKey:@"status"] isEqualToString:@"success"]) {
+                            [SVProgressHUD showWithStatus:@"Waiting for other phones"];
                             [self checkReady];
                         } else {
                             NSLog(@"ERROR1");
@@ -127,12 +130,13 @@
     NSString *postLength = [NSString stringWithFormat:@"%lu", (unsigned long)[postData length]];
     NSMutableURLRequest *request = [[NSMutableURLRequest alloc] init];
     
-    [request setURL:[NSURL URLWithString: @"http://54.174.96.55:3000/device/calibrate"]];
+    [request setURL:[NSURL URLWithString: @"http://54.174.96.55:3000/device/calibrate/ready"]];
     [request setHTTPMethod:@"POST"];
     [request setValue:postLength forHTTPHeaderField:@"Content-Length"];
     [request setValue:@"application/x-www-form-urlencoded" forHTTPHeaderField:@"Content-Type"];
     [request setHTTPBody:postData];
     
+    __weak IntermediateViewController *weakSelf = self;
     NSURLSession *session = [NSURLSession sharedSession];
     [[session dataTaskWithRequest:request
                 completionHandler:^(NSData *data, NSURLResponse *response, NSError *error) {
@@ -142,9 +146,8 @@
                                                         options:kNilOptions
                                                           error:&error];
                         NSLog(@"%@", dict);
-                        if ([[dict objectForKey:@"calibration_ready"] isEqualToString:@"success"]) {
-                            WebPlayerViewController *webplayer = [[WebPlayerViewController alloc] init];
-                            [self presentViewController:webplayer animated:YES completion:nil];
+                        if ([[dict objectForKey:@"calibration_ready"] isEqualToString:@"true"]) {
+                            [weakSelf performSelectorOnMainThread:@selector(pushDetail) withObject:nil waitUntilDone:NO];
                         } else {
                             [self wait];
                         }
@@ -154,9 +157,16 @@
                 }] resume];
 }
 
+- (void) pushDetail {
+    [SVProgressHUD dismiss];
+    WebPlayerViewController *webplayer = [[WebPlayerViewController alloc] init];
+    [self.navigationController pushViewController:webplayer animated:YES];
+}
+
 - (void)wait {
     sleep(0.5);
     [self checkReady];
+    
 }
 
 

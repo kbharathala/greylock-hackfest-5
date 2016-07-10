@@ -16,10 +16,16 @@
 
 @implementation WebPlayerViewController
 
+- (void) viewWillAppear:(BOOL)animated {
+    [self.navigationController.navigationBar setHidden:YES];
+}
+
 - (void)viewDidLoad {
     [super viewDidLoad];
     
-    NSString *urlString = @"http://54.174.96.55:3000/";
+    NSString *urlString = [NSString stringWithFormat: @"http://54.174.96.55:3000/page/%@/%@",
+                           [[NSUserDefaults standardUserDefaults] objectForKey:@"sessionID"],
+                           [[NSUserDefaults standardUserDefaults] objectForKey:@"phoneID"]];
     NSURL *url = [NSURL URLWithString:urlString];
     NSURLRequest *urlRequest = [NSURLRequest requestWithURL:url];
     
@@ -40,7 +46,7 @@
 
 - (void) handleDoubleTap {
     [[NSUserDefaults standardUserDefaults] setObject:@"YES" forKey:@"leavingWebView"];
-    [self dismissViewControllerAnimated:NO completion:nil];
+    [self.navigationController popToRootViewControllerAnimated:YES];
 }
 
 - (BOOL)prefersStatusBarHidden {
