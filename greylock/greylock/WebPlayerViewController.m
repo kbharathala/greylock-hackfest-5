@@ -7,6 +7,7 @@
 //
 
 #import "WebPlayerViewController.h"
+#import "SVProgressHUD/SVProgressHUD.h"
 
 @interface WebPlayerViewController () <UIGestureRecognizerDelegate>
 
@@ -35,18 +36,29 @@
     [self.webView loadRequest:urlRequest];
     
     UITapGestureRecognizer *doubleTap =
-        [[UITapGestureRecognizer alloc] initWithTarget:self action:@selector(handleDoubleTap)];
+    [[UITapGestureRecognizer alloc] initWithTarget:self action:@selector(handleDoubleTapWithGestureRecognizer:)];
     doubleTap.numberOfTouchesRequired = 1;
     doubleTap.numberOfTapsRequired = 2;
     doubleTap.delegate = self;
     [self.webView addGestureRecognizer:doubleTap];
-    
+
     [self.view addSubview:self.webView];
 }
 
-- (void) handleDoubleTap {
-    [[NSUserDefaults standardUserDefaults] setObject:@"YES" forKey:@"leavingWebView"];
-    [self.navigationController popToRootViewControllerAnimated:YES];
+-(BOOL)handleDoubleTapWithGestureRecognizer:(UITapGestureRecognizer *)gestureRecognizer {
+    CGPoint touchPoint = [gestureRecognizer locationInView: _webView];
+    NSString *imgURL = [NSString stringWithFormat:@"document.elementFromPoint(%f, %f).src", touchPoint.x, touchPoint.y];
+    NSString *urlToSave = [self.webView stringByEvaluatingJavaScriptFromString:imgURL];
+    if (![urlToSave isEqualToString:@""]) {
+        NSURL *imageURL = [NSURL URLWithString:urlToSave];
+        NSData *imageData = [NSData dataWithContentsOfURL:imageURL];
+        UIImage *image = [UIImage imageWithData:imageData];
+        
+        //Save Image to Directory
+        UIImageWriteToSavedPhotosAlbum(image, nil, nil, nil);
+        [SVProgressHUD showSuccessWithStatus:@"Image Saved"];
+    }
+    return YES;
 }
 
 - (BOOL)prefersStatusBarHidden {

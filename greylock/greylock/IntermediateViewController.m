@@ -9,6 +9,7 @@
 #import "IntermediateViewController.h"
 #import "WebPlayerViewController.h"
 #import "SVProgressHUD/SVProgressHUD.h"
+#import "YoutubeViewController.h"
 
 @interface IntermediateViewController ()
 
@@ -27,15 +28,6 @@
     }
     return self;
 }
-
-//- (void) viewWillAppear:(BOOL)animated {
-//    [super viewWillAppear:animated];
-//    
-//    if ([[[NSUserDefaults standardUserDefaults] objectForKey:@"leavingWebView"] boolValue]) {
-//        [[NSUserDefaults standardUserDefaults] setObject:@"NO" forKey:@"leavingWebView"];
-//        [self.navigationController popViewControllerAnimated:NO];
-//    }
-//}
 
 - (void)viewDidLoad {
     [super viewDidLoad];
@@ -159,8 +151,14 @@
 
 - (void) pushDetail {
     [SVProgressHUD dismiss];
-    WebPlayerViewController *webplayer = [[WebPlayerViewController alloc] init];
-    [self.navigationController pushViewController:webplayer animated:YES];
+    
+    if ([[[NSUserDefaults standardUserDefaults] objectForKey:@"widgetType"] isEqualToString:@"youtube"]) {
+        YoutubeViewController *youtubeVC = [[YoutubeViewController alloc] init];
+        [self.navigationController pushViewController:youtubeVC animated:YES];
+    } else {
+        WebPlayerViewController *webplayer = [[WebPlayerViewController alloc] init];
+        [self.navigationController pushViewController:webplayer animated:YES];
+    }
 }
 
 - (void)wait {

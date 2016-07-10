@@ -8,17 +8,24 @@
 
 #import "ViewController.h"
 #import "IntermediateViewController.h"
+#import <AWSS3/AWSS3.h>
+#import "SVProgressHUD/SVProgressHUD.h"
 
-@interface ViewController () <UICollectionViewDataSource,UICollectionViewDelegateFlowLayout> {
+@interface ViewController () <UICollectionViewDataSource,UICollectionViewDelegateFlowLayout,
+    UIImagePickerControllerDelegate, UINavigationControllerDelegate> {
     UICollectionView *_collectionView;
 }
 
 typedef NS_ENUM(NSUInteger, MasterWidgetList) {
     MasterWidgetYoutube,
+    MasterWidgetImgur,
+    MasterWidgetCamera,
+    MasterWidgetSharing,
     MasterWidgetCount,
 };
 
 @property(nonatomic) NSMutableArray *imageList;
+@property(nonatomic) UIImage *chosenImage;
 
 @end
 
@@ -36,6 +43,15 @@ typedef NS_ENUM(NSUInteger, MasterWidgetList) {
 - (void)viewDidLoad {
     [super viewDidLoad];
     
+    self.navigationController.navigationBar.barTintColor =
+        [UIColor colorWithRed:210.0/255 green:233.0/255 blue:248.0/255 alpha:1.0];
+    // self.navigationController.navigationBar.translucent = NO;
+    self.navigationController.navigationBar.tintColor =
+        [UIColor colorWithRed:0 green:51.0/255 blue:102.0/255 alpha:1.0];
+    [self.navigationController.navigationBar
+     setTitleTextAttributes:@{NSForegroundColorAttributeName :
+        [UIColor colorWithRed:0 green:51.0/255 blue:102.0/255 alpha:1.0]}];
+    
     UIBarButtonItem *joinButton =
     [[UIBarButtonItem alloc] initWithTitle:@"Join"
                                      style:UIBarButtonItemStylePlain
@@ -45,17 +61,21 @@ typedef NS_ENUM(NSUInteger, MasterWidgetList) {
     [self requestPhoneID];
     
     UICollectionViewFlowLayout *layout = [[UICollectionViewFlowLayout alloc] init];
+    [layout setSectionInset:UIEdgeInsetsMake(10, 5, 0, 5)];
     _collectionView =
         [[UICollectionView alloc] initWithFrame:self.view.frame collectionViewLayout:layout];
     [_collectionView setDataSource:self];
     [_collectionView setDelegate:self];
     [_collectionView registerClass:[UICollectionViewCell class]
         forCellWithReuseIdentifier:@"cellIdentifier"];
-    [_collectionView setBackgroundColor:[UIColor whiteColor]];
+    [_collectionView setBackgroundColor:[UIColor colorWithRed:0 green:0 blue:68.0/255 alpha:1.0]];
     [self.view addSubview:_collectionView];
     
     UIImage *youtubeImage = [UIImage imageNamed:@"youtube.png"];
-    self.imageList = [[NSMutableArray alloc] initWithObjects:youtubeImage, nil];
+    UIImage *imgurImage = [UIImage imageNamed:@"imgur.png"];
+    UIImage *cameraImage = [UIImage imageNamed:@"camera.png"];
+    UIImage *sharingImage = [UIImage imageNamed:@"sharing.png"];
+    self.imageList = [[NSMutableArray alloc] initWithObjects:youtubeImage, imgurImage, cameraImage, sharingImage ,nil];
     
 }
 
@@ -144,6 +164,13 @@ typedef NS_ENUM(NSUInteger, MasterWidgetList) {
     [[session dataTaskWithRequest:request
                 completionHandler:^(NSData *data, NSURLResponse *response, NSError *error) {
                     if (data) {
+                        
+                        NSDictionary *json = [NSJSONSerialization JSONObjectWithData:data
+                                                                             options:kNilOptions
+                                                                               error:&error];
+                        
+                        NSString *widget = [json objectForKey:@"widget"];
+                        [[NSUserDefaults standardUserDefaults] setObject:widget forKey:@"widgetType"];
                         [[NSUserDefaults standardUserDefaults] setObject:sessionID forKey:@"sessionID"];
                         [weakSelf performSelectorOnMainThread:@selector(pushDetail) withObject:nil waitUntilDone:NO];
                     } else {
@@ -155,7 +182,8 @@ typedef NS_ENUM(NSUInteger, MasterWidgetList) {
 /*
  * Call when launching widget1, will be refactored into onCollectionViewClick
  */
-- (void)launchWidget1 {
+- (void)launchWidget {
+    [SVProgressHUD dismiss];
     UIAlertController *alertController =
     [UIAlertController alertControllerWithTitle:@"How many phones do you want to use?"
                                         message:nil
@@ -189,8 +217,9 @@ typedef NS_ENUM(NSUInteger, MasterWidgetList) {
  * Called by launch widget to go to intermediateViewController.
  */
 - (void) setWithCount:(int)count {
-    NSString *post = [NSString stringWithFormat:@"phone_id=%@&count=%d",
-                      [[NSUserDefaults standardUserDefaults] objectForKey:@"phoneID"], count];
+    NSString *post = [NSString stringWithFormat:@"phone_id=%@&count=%d&widget=%@",
+                      [[NSUserDefaults standardUserDefaults] objectForKey:@"phoneID"], count,
+                      [[NSUserDefaults standardUserDefaults] objectForKey:@"widgetType"]];
     NSData *postData = [post dataUsingEncoding:NSASCIIStringEncoding allowLossyConversion:YES];
     NSString *postLength = [NSString stringWithFormat:@"%lu", (unsigned long)[postData length]];
     NSMutableURLRequest *request = [[NSMutableURLRequest alloc] init];
@@ -202,8 +231,6 @@ typedef NS_ENUM(NSUInteger, MasterWidgetList) {
     [request setValue:postLength forHTTPHeaderField:@"Content-Length"];
     [request setValue:@"application/x-www-form-urlencoded" forHTTPHeaderField:@"Content-Type"];
     [request setHTTPBody:postData];
-    
-    NSLog(@"ENTERING CREATE_SESSION REQUEST");
     
     __weak ViewController *weakSelf = self;
     __weak NSNumber *weakCount = [NSNumber numberWithInt:count];
@@ -256,17 +283,133 @@ typedef NS_ENUM(NSUInteger, MasterWidgetList) {
     backgroundImage.frame = cell.contentView.bounds;
     [cell.contentView addSubview:backgroundImage];
     
+    cell.layer.masksToBounds = YES;
+    cell.layer.cornerRadius = 20;
+    
+    if (indexPath.item == MasterWidgetYoutube) {
+        cell.backgroundColor = [UIColor whiteColor];
+    }
+    
+    
     return cell;
 }
 
 - (void) collectionView:(UICollectionView *)collectionView didSelectItemAtIndexPath:(NSIndexPath *)indexPath {
     if (indexPath.item == MasterWidgetYoutube) {
-        [self launchWidget1];
+        [self launchWidget];
+        [[NSUserDefaults standardUserDefaults] setObject:@"youtube" forKey:@"widgetType"];
+    } else if (indexPath.item == MasterWidgetSharing) {
+        [[NSUserDefaults standardUserDefaults] setObject:@"photoSharing" forKey:@"widgetType"];
+        [self launchSharing];
+    } else if (indexPath.item == MasterWidgetCamera) {
+        [[NSUserDefaults standardUserDefaults] setObject:@"photoSharing" forKey:@"widgetType"];
+        [self launchCameraSharing];
     }
 }
 
+- (void) launchSharing {
+    
+    UIImagePickerController *picker = [[UIImagePickerController alloc] init];
+    picker.delegate = self;
+    picker.allowsEditing = NO;
+    picker.sourceType = UIImagePickerControllerSourceTypePhotoLibrary;
+    
+    [self presentViewController:picker animated:YES completion:NULL];
+}
+
+- (void)launchCameraSharing {
+    UIImagePickerController *picker = [[UIImagePickerController alloc] init];
+    picker.delegate = self;
+    picker.allowsEditing = NO;
+    picker.sourceType = UIImagePickerControllerSourceTypeCamera;
+    
+    [self presentViewController:picker animated:YES completion:NULL];
+}
+
+- (void)imagePickerController:(UIImagePickerController *)picker didFinishPickingMediaWithInfo:(NSDictionary *)info {
+    [picker dismissViewControllerAnimated:YES completion:NULL];
+    self.chosenImage = [info objectForKey: UIImagePickerControllerOriginalImage];
+    [self uploadImage];
+}
+
+- (void)imagePickerControllerDidCancel:(UIImagePickerController *)picker {
+    [picker dismissViewControllerAnimated:YES completion:NULL];
+}
+
+- (void) uploadImage {
+    //Create temporary directory
+    
+    [SVProgressHUD showWithStatus:@"Waiting for Amazon"];
+    
+    NSError *error = nil;
+    if (![[NSFileManager defaultManager] createDirectoryAtPath:[NSTemporaryDirectory() stringByAppendingPathComponent:@"upload"]
+                                   withIntermediateDirectories:YES
+                                                    attributes:nil
+                                                         error:&error]) {
+        NSLog(@"reading 'upload' directory failed: [%@]", error);
+    }
+    
+    //write the image to the created directory
+    UIImage *image =  self.chosenImage; //Check below how do I get it
+    
+    NSString *fileName = [[[NSProcessInfo processInfo] globallyUniqueString] stringByAppendingString:@".jpg"];
+    
+    NSString *filePath = [[NSTemporaryDirectory() stringByAppendingPathComponent:@"upload"] stringByAppendingPathComponent:fileName];
+    
+    NSData * imageData = UIImagePNGRepresentation(image);
+    [imageData writeToFile:filePath atomically:YES];
+    
+    //Create upload request
+    AWSS3TransferManagerUploadRequest *uploadRequest = [AWSS3TransferManagerUploadRequest new];
+    uploadRequest.body = [NSURL fileURLWithPath:filePath];
+    uploadRequest.bucket = @"greylock-hackfest";
+    uploadRequest.key = @"image.jpg";
+    
+    AWSS3TransferManager *transferManager = [AWSS3TransferManager defaultS3TransferManager];
+    
+    __weak ViewController *weakSelf = self;
+    [[transferManager upload:uploadRequest] continueWithExecutor:[AWSExecutor mainThreadExecutor]
+       withBlock:^id(AWSTask *task) {
+           if (task.error) {
+               if ([task.error.domain isEqualToString:AWSS3TransferManagerErrorDomain]) {
+                   switch (task.error.code) {
+                       case AWSS3TransferManagerErrorCancelled:
+                       case AWSS3TransferManagerErrorPaused:
+                           break;
+                           
+                       default:
+                           NSLog(@"Error: %@", task.error);
+                           break;
+                   }
+               } else {
+                   // Unknown error.
+                   NSLog(@"Error: %@", task.error);
+               }
+           }
+           
+           if (task.result) {
+               AWSS3TransferManagerUploadOutput *uploadOutput = task.result;
+               [weakSelf performSelectorOnMainThread:@selector(launchWidget) withObject:nil waitUntilDone:NO];
+               // The file uploaded successfully.
+           }
+           return nil;
+       }];
+    
+    
+}
+
 - (CGSize)collectionView:(UICollectionView *)collectionView layout:(UICollectionViewLayout*)collectionViewLayout sizeForItemAtIndexPath:(NSIndexPath *)indexPath {
-    return CGSizeMake(self.view.frame.size.width/2 - 5, self.view.frame.size.width/2 - 5);
+    
+    float cellSize = self.view.frame.size.width/3 - 7;
+    
+    CGSize onebyone = CGSizeMake(cellSize, cellSize);
+    CGSize twobyone = CGSizeMake(cellSize*2, cellSize);
+    
+    if (indexPath.item % 4 == 0 || indexPath.item % 4 == 3) {
+        return twobyone;
+    } else {
+        return onebyone;
+    }
 }
 
 
